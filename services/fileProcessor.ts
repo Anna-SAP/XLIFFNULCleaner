@@ -38,18 +38,25 @@ const repairLine = (line: string): { cleaned: string; fixes: number } => {
     current = current.replace(controlCharRegex, '');
   }
 
-  // 2. Fix Unquoted Attributes
+  // 2. Fix Invalid Start Tags (Crucial for "<200" error)
+  // Finds '<' that is NOT followed by a valid tag character (letter, /, !, ?, or _)
+  // This converts "<200" -> "&lt;200" while leaving "<trans-unit>" or "</target>" alone.
+  const invalidStartTagRegex = /<(?![a-zA-Z\/\!_\?])/g;
+  if (invalidStartTagRegex.test(current)) {
+    fixes += (current.match(invalidStartTagRegex) || []).length;
+    current = current.replace(invalidStartTagRegex, '&lt;');
+  }
+
+  // 3. Fix Unquoted Attributes
   // Finds pattern: space + key + = + value(no quotes)
   // Example: id=123 -> id="123"
-  // Constraint: Value cannot contain spaces, >, or existing quotes.
   const unquotedAttrRegex = /(\s)([a-zA-Z0-9_:-]+)=([^"'\s><]+)(?=\s|>|\/)/g;
   if (unquotedAttrRegex.test(current)) {
-    // We count matches as 1 fix each
     fixes += (current.match(unquotedAttrRegex) || []).length;
     current = current.replace(unquotedAttrRegex, '$1$2="$3"');
   }
 
-  // 3. Fix Missing Space Between Attributes
+  // 4. Fix Missing Space Between Attributes
   // Finds pattern: quote + word + =
   // Example: "value"id= -> "value" id=
   const missingSpaceRegex = /"([a-zA-Z0-9_:-]+=)/g;
@@ -58,8 +65,8 @@ const repairLine = (line: string): { cleaned: string; fixes: number } => {
     current = current.replace(missingSpaceRegex, '" $1');
   }
 
-  // 4. Fix Unescaped Ampersands
-  // Finds '&' that is NOT followed by a valid entity pattern (amp, lt, gt, apos, quot, #123, #xAF)
+  // 5. Fix Unescaped Ampersands
+  // Finds '&' that is NOT followed by a valid entity pattern
   const unescapedAmpRegex = /&(?!(?:amp|lt|gt|apos|quot|#\d+|#x[a-fA-F0-9]+);)/g;
   if (unescapedAmpRegex.test(current)) {
     fixes += (current.match(unescapedAmpRegex) || []).length;
