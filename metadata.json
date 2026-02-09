@@ -1,0 +1,5 @@
+{
+  "name": "🥝 XLIFF NUL Cleaner",
+  "description": "A secure, client-side tool to remove invalid NUL characters from XLIFF and XML translation files, ensuring validity and UTF-8 integrity.",
+  "requestFramePermissions": []
+}
